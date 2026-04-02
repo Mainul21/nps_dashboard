@@ -1,0 +1,10 @@
+{
+  "name": "nps-dashboard",
+  "version": "1.0.0",
+  "description": "NPS Dashboard – Fullstack Vercel App",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'"
+  },
+  "private": true
+}
