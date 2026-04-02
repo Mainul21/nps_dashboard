@@ -4,16 +4,93 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NPS Dashboard — Customer Sentiment Analytics</title>
-  <meta name="description" content="Real-time Net Promoter Score dashboard with interactive charts, filters, and customer sentiment tracking." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <!-- <link rel="stylesheet" href="/css/styles.css" /> -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0e14; --surface: #12161f; --card: #181d28;
+      --border: rgba(255,255,255,0.07); --text: #e8eaed;
+      --muted: #6b7280; --purple: #a78bfa; --blue: #38bdf8;
+      --teal: #2dd4bf; --green: #4ade80; --red: #f87171; --amber: #fbbf24;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; min-height: 100vh; }
+
+    /* HEADER */
+    #app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; }
+    .header-inner { max-width: 1400px; margin: 0 auto; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .logo-group { display: flex; align-items: center; gap: 12px; }
+    .logo-icon svg { width: 28px; height: 28px; }
+    h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--purple), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .header-badge { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--green); background: rgba(74,222,128,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(74,222,128,0.2); }
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+    /* MAIN */
+    main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+    /* METRICS */
+    .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .metric-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 4px; transition: transform .2s; }
+    .metric-card:hover { transform: translateY(-2px); }
+    .metric-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+    .metric-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
+    .metric-sub { font-size: 12px; color: var(--muted); }
+    .accent-purple .metric-value { color: var(--purple); }
+    .accent-blue .metric-value { color: var(--blue); }
+    .accent-teal .metric-value { color: var(--teal); }
+    .accent-green .metric-value { color: var(--green); }
+    .accent-red .metric-value { color: var(--red); }
+
+    /* FILTERS */
+    .filters-bar { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .filter-group select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; outline: none; }
+    .filter-group select:focus { border-color: var(--purple); }
+    .btn-reset { margin-left: auto; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer; transition: all .2s; }
+    .btn-reset:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    /* CHARTS */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+    .chart-card h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* TABLE */
+    .table-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+    .table-section h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .05em; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* BADGES */
+    .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 700; font-size: 13px; }
+    .score-badge.promoter { background: rgba(74,222,128,0.15); color: var(--green); }
+    .score-badge.passive  { background: rgba(251,191,36,0.15);  color: var(--amber); }
+    .score-badge.detractor{ background: rgba(248,113,113,0.15); color: var(--red); }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-badge.active  { background: rgba(74,222,128,0.12); color: var(--green); }
+    .status-badge.churned { background: rgba(248,113,113,0.12); color: var(--red); }
+    .status-badge.default { background: rgba(255,255,255,0.07); color: var(--muted); }
+
+    /* FOOTER */
+    #app-footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 900px) {
+      .metrics-row { grid-template-columns: repeat(3, 1fr); }
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .metrics-row { grid-template-columns: repeat(2, 1fr); }
+      main { padding: 1rem; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- ═══════════ HEADER ═══════════ -->
   <header id="app-header">
     <div class="header-inner">
       <div class="logo-group">
@@ -25,98 +102,210 @@
           <p class="subtitle">Customer Sentiment Analytics</p>
         </div>
       </div>
-      <div class="header-badge" id="live-badge">
-        <span class="pulse"></span> Live
-      </div>
+      <div class="header-badge"><span class="pulse"></span> Live</div>
     </div>
   </header>
 
-  <main id="dashboard">
-
-    <!-- ═══════════ METRIC CARDS ═══════════ -->
-    <section class="metrics-row" id="metrics-section" aria-label="Key Metrics">
-      <div class="metric-card accent-purple" id="card-nps">
-        <span class="metric-label">NPS Score</span>
-        <span class="metric-value" id="metric-nps">—</span>
-        <span class="metric-sub" id="metric-nps-sub"></span>
-      </div>
-      <div class="metric-card accent-blue" id="card-avg">
-        <span class="metric-label">Avg Score</span>
-        <span class="metric-value" id="metric-avg">—</span>
-      </div>
-      <div class="metric-card accent-teal" id="card-total">
-        <span class="metric-label">Total Responses</span>
-        <span class="metric-value" id="metric-total">0</span>
-      </div>
-      <div class="metric-card accent-green" id="card-promoters">
-        <span class="metric-label">Promoters</span>
-        <span class="metric-value" id="metric-promoters">0</span>
-        <span class="metric-sub">(Score 9–10)</span>
-      </div>
-      <div class="metric-card accent-red" id="card-detractors">
-        <span class="metric-label">Detractors</span>
-        <span class="metric-value" id="metric-detractors">0</span>
-        <span class="metric-sub">(Score 0–6)</span>
-      </div>
+  <main>
+    <section class="metrics-row">
+      <div class="metric-card accent-purple"><span class="metric-label">NPS Score</span><span class="metric-value" id="metric-nps">—</span><span class="metric-sub" id="metric-nps-sub"></span></div>
+      <div class="metric-card accent-blue"><span class="metric-label">Avg Score</span><span class="metric-value" id="metric-avg">—</span></div>
+      <div class="metric-card accent-teal"><span class="metric-label">Total Responses</span><span class="metric-value" id="metric-total">0</span></div>
+      <div class="metric-card accent-green"><span class="metric-label">Promoters</span><span class="metric-value" id="metric-promoters">0</span><span class="metric-sub">(Score 9–10)</span></div>
+      <div class="metric-card accent-red"><span class="metric-label">Detractors</span><span class="metric-value" id="metric-detractors">0</span><span class="metric-sub">(Score 0–6)</span></div>
     </section>
 
-    <!-- ═══════════ FILTERS ═══════════ -->
-    <section class="filters-bar" id="filters-section" aria-label="Filters">
-      <div class="filter-group">
-        <label for="filter-year">Year</label>
-        <select id="filter-year"><option value="">All Years</option></select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-month">Month</label>
-        <select id="filter-month"><option value="">All Months</option></select>
-      </div>
-      <div class="filter-group">
-        <label for="filter-account">Account</label>
-        <select id="filter-account"><option value="">All Accounts</option></select>
-      </div>
+    <section class="filters-bar">
+      <div class="filter-group"><label for="filter-year">Year</label><select id="filter-year"><option value="">All Years</option></select></div>
+      <div class="filter-group"><label for="filter-month">Month</label><select id="filter-month"><option value="">All Months</option></select></div>
+      <div class="filter-group"><label for="filter-account">Account</label><select id="filter-account"><option value="">All Accounts</option></select></div>
       <button class="btn-reset" id="btn-reset-filters">Reset Filters</button>
     </section>
 
-    <!-- ═══════════ CHARTS ═══════════ -->
-    <section class="charts-row" id="charts-section" aria-label="Charts">
-      <div class="chart-card wide">
-        <h2>Monthly Breakdown</h2>
-        <canvas id="chart-bar"></canvas>
-      </div>
-      <div class="chart-card narrow">
-        <h2>Overall Distribution</h2>
-        <canvas id="chart-donut"></canvas>
-      </div>
+    <section class="charts-row">
+      <div class="chart-card"><h2>Monthly Breakdown</h2><canvas id="chart-bar"></canvas></div>
+      <div class="chart-card"><h2>Overall Distribution</h2><canvas id="chart-donut"></canvas></div>
     </section>
 
-    <!-- ═══════════ TABLE ═══════════ -->
-    <section class="table-section" id="table-section" aria-label="Records Table">
+    <section class="table-section">
       <h2>All Responses</h2>
       <div class="table-wrap">
-        <table id="data-table">
-          <thead>
-            <tr>
-              <th>Account Name</th>
-              <th>Score</th>
-              <th>Response</th>
-              <th>Month</th>
-              <th>Year</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            <!-- rows injected by JS -->
-          </tbody>
+        <table>
+          <thead><tr><th>Account Name</th><th>Score</th><th>Response</th><th>Month</th><th>Year</th><th>Status</th></tr></thead>
+          <tbody id="table-body"></tbody>
         </table>
       </div>
     </section>
-
   </main>
 
-  <footer id="app-footer">
-    <p>&copy; 2025 NPS Dashboard &bull; Data refreshes every 5 seconds</p>
-  </footer>
+  <footer id="app-footer"><p>&copy; 2025 NPS Dashboard &bull; Data refreshes every 5 seconds</p></footer>
 
-  <script src="/js/app.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    const API_URL = "/api/nps";
+    const MONTH_ORDER = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+    const $nps        = document.getElementById("metric-nps");
+    const $npsSub     = document.getElementById("metric-nps-sub");
+    const $avg        = document.getElementById("metric-avg");
+    const $total      = document.getElementById("metric-total");
+    const $promoters  = document.getElementById("metric-promoters");
+    const $detractors = document.getElementById("metric-detractors");
+    const $tableBody  = document.getElementById("table-body");
+    const $filterYear    = document.getElementById("filter-year");
+    const $filterMonth   = document.getElementById("filter-month");
+    const $filterAccount = document.getElementById("filter-account");
+
+    let barChart = null, donutChart = null, rawRecords = [];
+
+    function classify(score) {
+      const n = parseInt(score, 10);
+      if (n >= 9) return "promoter";
+      if (n >= 7) return "passive";
+      return "detractor";
+    }
+
+    async function fetchData() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        rawRecords = await res.json();
+        populateFilters();
+        render();
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+
+    function getFiltered() {
+      const fy = $filterYear.value, fm = $filterMonth.value, fa = $filterAccount.value;
+      return rawRecords.filter(r => {
+        const d = r.data;
+        if (fy && d["Year"] !== fy) return false;
+        if (fm && d["Month"] !== fm) return false;
+        if (fa && d["Account Name"] !== fa) return false;
+        return true;
+      });
+    }
+
+    function populateFilters() {
+      const years = new Set(), months = new Set(), accounts = new Set();
+      rawRecords.forEach(r => {
+        if (r.data["Year"]) years.add(r.data["Year"]);
+        if (r.data["Month"]) months.add(r.data["Month"]);
+        if (r.data["Account Name"]) accounts.add(r.data["Account Name"]);
+      });
+      sync($filterYear,    [...years].sort(),    "All Years");
+      sync($filterMonth,   [...months].sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b)), "All Months");
+      sync($filterAccount, [...accounts].sort(), "All Accounts");
+    }
+
+    function sync(el, opts, placeholder) {
+      const cur = el.value;
+      el.innerHTML = `<option value="">${placeholder}</option>` + opts.map(o => `<option value="${o}"${o===cur?" selected":""}>${o}</option>`).join("");
+    }
+
+    function render() {
+      const data = getFiltered();
+      updateMetrics(data);
+      updateBar(data);
+      updateDonut(data);
+      updateTable(data);
+    }
+
+    function updateMetrics(data) {
+      const total = data.length;
+      let p = 0, det = 0, sum = 0;
+      data.forEach(r => {
+        const s = parseInt(r.data["Score"], 10);
+        sum += s;
+        const c = classify(s);
+        if (c === "promoter") p++;
+        else if (c === "detractor") det++;
+      });
+      const pctP = total ? p/total*100 : 0;
+      const pctD = total ? det/total*100 : 0;
+      const nps  = Math.round(pctP - pctD);
+      $nps.textContent      = total ? nps : "—";
+      $npsSub.textContent   = total ? `${pctP.toFixed(0)}% P – ${pctD.toFixed(0)}% D` : "";
+      $avg.textContent      = total ? (sum/total).toFixed(1) : "—";
+      $total.textContent    = total;
+      $promoters.textContent  = p;
+      $detractors.textContent = det;
+    }
+
+    function updateBar(data) {
+      const grouped = {};
+      data.forEach(r => {
+        const m = r.data["Month"];
+        if (!grouped[m]) grouped[m] = {promoter:0,passive:0,detractor:0};
+        grouped[m][classify(r.data["Score"])]++;
+      });
+      const labels = Object.keys(grouped).sort((a,b) => MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b));
+      const cfg = {
+        type: "bar",
+        data: { labels, datasets: [
+          {label:"Promoters", data:labels.map(l=>grouped[l].promoter),  backgroundColor:"rgba(74,222,128,0.75)", borderRadius:4, borderSkipped:false},
+          {label:"Passives",  data:labels.map(l=>grouped[l].passive),   backgroundColor:"rgba(251,191,36,0.65)", borderRadius:4, borderSkipped:false},
+          {label:"Detractors",data:labels.map(l=>grouped[l].detractor), backgroundColor:"rgba(248,113,113,0.75)",borderRadius:4, borderSkipped:false}
+        ]},
+        options: { responsive:true, maintainAspectRatio:true,
+          plugins:{ legend:{labels:{color:"#9aa0a8",font:{size:12},padding:18}}, tooltip:{backgroundColor:"rgba(17,19,25,0.92)",titleColor:"#e8eaed",bodyColor:"#9aa0a8",cornerRadius:10,padding:12} },
+          scales:{ x:{stacked:true,ticks:{color:"#5f6672"},grid:{color:"rgba(255,255,255,0.04)"}}, y:{stacked:true,beginAtZero:true,ticks:{color:"#5f6672",stepSize:1},grid:{color:"rgba(255,255,255,0.04)"}} }
+        }
+      };
+      if (barChart) { barChart.data = cfg.data; barChart.update("none"); }
+      else barChart = new Chart(document.getElementById("chart-bar"), cfg);
+    }
+
+    function updateDonut(data) {
+      let p=0,pa=0,d=0;
+      data.forEach(r => { const c=classify(r.data["Score"]); if(c==="promoter")p++; else if(c==="passive")pa++; else d++; });
+      const cfg = {
+        type:"doughnut",
+        data:{labels:["Promoters","Passives","Detractors"],datasets:[{data:[p,pa,d],backgroundColor:["rgba(74,222,128,0.8)","rgba(251,191,36,0.7)","rgba(248,113,113,0.8)"],borderColor:"#0b0e14",borderWidth:3,hoverOffset:8}]},
+        options:{responsive:true,maintainAspectRatio:true,cutout:"68%",
+          plugins:{legend:{position:"bottom",labels:{color:"#9aa0a8",font:{size:12},padding:18}},tooltip:{backgroundColor:"rgba(17,19,25,0.92)",titleColor:"#e8eaed",bodyColor:"#9aa0a8",cornerRadius:10,padding:12}}
+        }
+      };
+      if (donutChart) { donutChart.data = cfg.data; donutChart.update("none"); }
+      else donutChart = new Chart(document.getElementById("chart-donut"), cfg);
+    }
+
+    function updateTable(data) {
+      if (!data.length) {
+        $tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:40px">No records found</td></tr>`;
+        return;
+      }
+      $tableBody.innerHTML = data.map(r => {
+        const d = r.data;
+        const score = parseInt(d["Score"],10);
+        const cat = classify(score);
+        const st = (d["Status"]||"").toLowerCase();
+        const stClass = st==="active"?"active":st==="churned"?"churned":"default";
+        return `<tr>
+          <td>${d["Account Name"]||""}</td>
+          <td><span class="score-badge ${cat}">${score}</span></td>
+          <td>${d["Response"]||""}</td>
+          <td>${d["Month"]||""}</td>
+          <td>${d["Year"]||""}</td>
+          <td><span class="status-badge ${stClass}">${d["Status"]||""}</span></td>
+        </tr>`;
+      }).join("");
+    }
+
+    $filterYear.addEventListener("change", render);
+    $filterMonth.addEventListener("change", render);
+    $filterAccount.addEventListener("change", render);
+    document.getElementById("btn-reset-filters").addEventListener("click", () => {
+      $filterYear.value = ""; $filterMonth.value = ""; $filterAccount.value = "";
+      render();
+    });
+
+    fetchData();
+    setInterval(fetchData, 5000);
+  })();
+  </script>
 </body>
 </html>
