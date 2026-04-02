@@ -4,21 +4,21 @@
  * This file is NOT deployed to Vercel; it's for local testing only.
  */
 const http = require("http");
-const fs   = require("fs");
+const fs = require("fs");
 const path = require("path");
-const url  = require("url");
+const url = require("url");
 
 const PORT = 3000;
 const handler = require("./api/nps");
 
 const MIME = {
   ".html": "text/html",
-  ".css":  "text/css",
-  ".js":   "application/javascript",
+  ".css": "text/css",
+  ".js": "application/javascript",
   ".json": "application/json",
-  ".png":  "image/png",
-  ".svg":  "image/svg+xml",
-  ".ico":  "image/x-icon"
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
 };
 
 const server = http.createServer((req, res) => {
@@ -32,11 +32,18 @@ const server = http.createServer((req, res) => {
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       if (body) {
-        try { req.body = JSON.parse(body); } catch { req.body = null; }
+        try {
+          req.body = JSON.parse(body);
+        } catch {
+          req.body = null;
+        }
       }
       // Mini mock of Vercel's res helpers
-      res.status = (code) => { res.statusCode = code; return res; };
-      res.json   = (data) => {
+      res.status = (code) => {
+        res.statusCode = code;
+        return res;
+      };
+      res.json = (data) => {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(data));
       };

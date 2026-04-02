@@ -2,5 +2,19 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/nps", "destination": "/api/nps" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ],
+  "routes": [
+    { "src": "/api/nps", "dest": "/api/nps.js" },
+    { "src": "/js/(.*)", "dest": "/js/$1" },
+    { "src": "/css/(.*)", "dest": "/css/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
