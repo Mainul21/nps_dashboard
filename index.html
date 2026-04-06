@@ -1,311 +1,824 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NPS Dashboard — Customer Sentiment Analytics</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0b0e14; --surface: #12161f; --card: #181d28;
-      --border: rgba(255,255,255,0.07); --text: #e8eaed;
-      --muted: #6b7280; --purple: #a78bfa; --blue: #38bdf8;
-      --teal: #2dd4bf; --green: #4ade80; --red: #f87171; --amber: #fbbf24;
-    }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; min-height: 100vh; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPS Analytics | Customer Sentiment Dashboard</title>
+    <meta name="description" content="A lightweight, high-performance Net Promoter Score (NPS) dashboard. Dashboard features client-side data processing and real-time visualization.">
+    
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for high-fidelity visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-    /* HEADER */
-    #app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; }
-    .header-inner { max-width: 1400px; margin: 0 auto; height: 64px; display: flex; align-items: center; justify-content: space-between; }
-    .logo-group { display: flex; align-items: center; gap: 12px; }
-    .logo-icon svg { width: 28px; height: 28px; }
-    h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--purple), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { font-size: 12px; color: var(--muted); margin-top: 1px; }
-    .header-badge { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--green); background: rgba(74,222,128,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(74,222,128,0.2); }
-    .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.8s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+    <style>
+        :root {
+            /* Premium Color Palette (Dark Mode First) */
+            --bg-body: #080a0f;
+            --bg-card: #121620;
+            --bg-surface: #1a1f2c;
+            --accent-primary: #6366f1; /* Indigo */
+            --accent-secondary: #0ea5e9; /* Sky */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            
+            /* NPS Categories */
+            --promoter: #10b981;
+            --passive: #f59e0b;
+            --detractor: #ef4444;
+            
+            /* Glassmorphism */
+            --glass-bg: rgba(18, 22, 32, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
 
-    /* MAIN */
-    main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    /* METRICS */
-    .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-    .metric-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 4px; transition: transform .2s; }
-    .metric-card:hover { transform: translateY(-2px); }
-    .metric-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-    .metric-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
-    .metric-sub { font-size: 12px; color: var(--muted); }
-    .accent-purple .metric-value { color: var(--purple); }
-    .accent-blue .metric-value { color: var(--blue); }
-    .accent-teal .metric-value { color: var(--teal); }
-    .accent-green .metric-value { color: var(--green); }
-    .accent-red .metric-value { color: var(--red); }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
 
-    /* FILTERS */
-    .filters-bar { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-    .filter-group select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; outline: none; }
-    .filter-group select:focus { border-color: var(--purple); }
-    .btn-reset { margin-left: auto; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer; transition: all .2s; }
-    .btn-reset:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+        /* --- Header --- */
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-body) 100%);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
 
-    /* CHARTS */
-    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-    .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
-    .chart-card h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .05em; }
+        .brand h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
 
-    /* TABLE */
-    .table-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
-    .table-section h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .05em; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; padding: 10px 14px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--promoter);
+            padding: 0.4rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
 
-    /* BADGES */
-    .score-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 700; font-size: 13px; }
-    .score-badge.promoter { background: rgba(74,222,128,0.15); color: var(--green); }
-    .score-badge.passive  { background: rgba(251,191,36,0.15);  color: var(--amber); }
-    .score-badge.detractor{ background: rgba(248,113,113,0.15); color: var(--red); }
-    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .status-badge.active  { background: rgba(74,222,128,0.12); color: var(--green); }
-    .status-badge.churned { background: rgba(248,113,113,0.12); color: var(--red); }
-    .status-badge.default { background: rgba(255,255,255,0.07); color: var(--muted); }
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--promoter);
+            border-radius: 50%;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: pulse-animation 2s infinite;
+        }
 
-    /* FOOTER */
-    #app-footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 12px; }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
 
-    @media (max-width: 900px) {
-      .metrics-row { grid-template-columns: repeat(3, 1fr); }
-      .charts-row { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 600px) {
-      .metrics-row { grid-template-columns: repeat(2, 1fr); }
-      main { padding: 1rem; }
-    }
-  </style>
+        /* --- Layout --- */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* --- Metrics Section --- */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+        }
+
+        .metric-card.nps::before { background: var(--accent-primary); }
+        .metric-card.avg::before { background: var(--accent-secondary); }
+        .metric-card.total::before { background: var(--text-muted); }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .metric-trend {
+            font-size: 0.75rem;
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* --- Visualization Section --- */
+        .viz-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* --- Filters Section --- */
+        .filters-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-group select {
+            background: var(--bg-surface);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            /* Custom dropdown arrow */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem top 50%;
+            background-size: 0.65rem auto;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .btn-reset {
+            margin-left: auto;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            color: var(--text-main);
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* --- Table Section --- */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-surface);
+            padding: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-promoter { background: rgba(16, 185, 129, 0.15); color: var(--promoter); }
+        .badge-passive { background: rgba(245, 158, 11, 0.15); color: var(--passive); }
+        .badge-detractor { background: rgba(239, 68, 68, 0.15); color: var(--detractor); }
+
+        /* --- Responsive Styling --- */
+        @media (max-width: 1024px) {
+            .viz-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            main { padding: 1rem; }
+            .metrics-grid { grid-template-columns: 1fr 1fr; }
+            .metric-value { font-size: 1.75rem; }
+        }
+
+        /* Loading Overlay */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-body);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
-  <header id="app-header">
-    <div class="header-inner">
-      <div class="logo-group">
-        <div class="logo-icon">
-          <svg viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" stroke="url(#lg)" stroke-width="2"/><path d="M9 14.5L12.5 18L19 11" stroke="url(#lg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="lg" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs></svg>
-        </div>
-        <div>
-          <h1>NPS Dashboard</h1>
-          <p class="subtitle">Customer Sentiment Analytics</p>
-        </div>
-      </div>
-      <div class="header-badge"><span class="pulse"></span> Live</div>
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem;">Connecting to Analytics Engine...</p>
     </div>
-  </header>
 
-  <main>
-    <section class="metrics-row">
-      <div class="metric-card accent-purple"><span class="metric-label">NPS Score</span><span class="metric-value" id="metric-nps">—</span><span class="metric-sub" id="metric-nps-sub"></span></div>
-      <div class="metric-card accent-blue"><span class="metric-label">Avg Score</span><span class="metric-value" id="metric-avg">—</span></div>
-      <div class="metric-card accent-teal"><span class="metric-label">Total Responses</span><span class="metric-value" id="metric-total">0</span></div>
-      <div class="metric-card accent-green"><span class="metric-label">Promoters</span><span class="metric-value" id="metric-promoters">0</span><span class="metric-sub">(Score 9–10)</span></div>
-      <div class="metric-card accent-red"><span class="metric-label">Detractors</span><span class="metric-value" id="metric-detractors">0</span><span class="metric-sub">(Score 0–6)</span></div>
-    </section>
+    <header>
+        <div class="brand">
+            <h1>NPS.Analytics</h1>
+        </div>
+        <div class="status-pill">
+            <span class="pulse"></span>
+            Real-time Monitoring
+        </div>
+    </header>
 
-    <section class="filters-bar">
-      <div class="filter-group"><label for="filter-year">Year</label><select id="filter-year"><option value="">All Years</option></select></div>
-      <div class="filter-group"><label for="filter-month">Month</label><select id="filter-month"><option value="">All Months</option></select></div>
-      <div class="filter-group"><label for="filter-account">Account</label><select id="filter-account"><option value="">All Accounts</option></select></div>
-      <button class="btn-reset" id="btn-reset-filters">Reset Filters</button>
-    </section>
+    <main>
+        <!-- Metrics Row -->
+        <section class="metrics-grid">
+            <div class="metric-card nps">
+                <div class="metric-label">Net Promoter Score</div>
+                <div class="metric-value" id="val-nps">—</div>
+                <div class="metric-trend" id="trend-nps">Calculated on total responses</div>
+            </div>
+            <div class="metric-card avg">
+                <div class="metric-label">Average Score</div>
+                <div class="metric-value" id="val-avg">—</div>
+                <div class="metric-trend">Scale 0-10</div>
+            </div>
+            <div class="metric-card total">
+                <div class="metric-label">Total Responses</div>
+                <div class="metric-value" id="val-total">0</div>
+                <div class="metric-trend">Lifetime volume</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Promoters</div>
+                <div class="metric-value" style="color: var(--promoter)" id="val-p">0</div>
+                <div class="metric-trend">9-10 rating</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Detractors</div>
+                <div class="metric-value" style="color: var(--detractor)" id="val-d">0</div>
+                <div class="metric-trend">0-6 rating</div>
+            </div>
+        </section>
 
-    <section class="charts-row">
-      <div class="chart-card"><h2>Monthly Breakdown</h2><canvas id="chart-bar"></canvas></div>
-      <div class="chart-card"><h2>Overall Distribution</h2><canvas id="chart-donut"></canvas></div>
-    </section>
+        <!-- Filters Bar -->
+        <section class="filters-bar">
+            <div class="filter-group">
+                <label for="filter-year">Year</label>
+                <select id="filter-year">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-month">Month</label>
+                <select id="filter-month">
+                    <option value="">All Months</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-account">Account</label>
+                <select id="filter-account">
+                    <option value="">All Accounts</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-status">Status</label>
+                <select id="filter-status">
+                    <option value="">All Statuses</option>
+                </select>
+            </div>
+            <button class="btn-reset" id="btn-reset-filters">Reset Filters</button>
+        </section>
 
-    <section class="table-section">
-      <h2>All Responses</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Account Name</th><th>Score</th><th>Response</th><th>Month</th><th>Year</th><th>Status</th></tr></thead>
-          <tbody id="table-body"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+        <section class="viz-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Monthly Trends</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chart-trends"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Response Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chart-dist"></canvas>
+                </div>
+            </div>
+        </section>
 
-  <footer id="app-footer"><p>&copy; 2025 NPS Dashboard &bull; Data refreshes every 5 seconds</p></footer>
+        <!-- Table Row -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Feedback</h2>
+            </div>
+            <div class="table-container">
+                <table id="tbl-feedback">
+                    <thead>
+                        <tr>
+                            <th>Account Name</th>
+                            <th>Score</th>
+                            <th>Status</th>
+                            <th>Period</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-feedback">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                Initiating secure data handshake...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
-  <script>
-  (function () {
-    "use strict";
-    const API_URL = "/api/nps";
-    const MONTH_ORDER = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    <script>
+        /**
+         * NPS Dashboard Logic - Modular & Pure Client-Side
+         */
 
-    const $nps        = document.getElementById("metric-nps");
-    const $npsSub     = document.getElementById("metric-nps-sub");
-    const $avg        = document.getElementById("metric-avg");
-    const $total      = document.getElementById("metric-total");
-    const $promoters  = document.getElementById("metric-promoters");
-    const $detractors = document.getElementById("metric-detractors");
-    const $tableBody  = document.getElementById("table-body");
-    const $filterYear    = document.getElementById("filter-year");
-    const $filterMonth   = document.getElementById("filter-month");
-    const $filterAccount = document.getElementById("filter-account");
 
-    let barChart = null, donutChart = null, rawRecords = [];
+        // --- State Management ---
+        const State = {
+            token: null,
+            rawRecords: [],
+            filters: {
+                year: '',
+                month: '',
+                account: '',
+                status: ''
+            },
+            processedData: {
+                metrics: { nps: 0, avg: 0, total: 0, p: 0, d: 0, pa: 0 },
+                monthly: {}, // { 'Jan 23': { p: 0, pa: 0, d: 0 } }
+                latest: []
+            },
+            charts: {
+                trends: null,
+                dist: null
+            }
+        };
 
-    function classify(score) {
-      const n = parseInt(score, 10);
-      if (n >= 9) return "promoter";
-      if (n >= 7) return "passive";
-      return "detractor";
-    }
+        // --- UI Initialization ---
+        let isInitialized = false;
 
-    async function fetchData() {
-      try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        rawRecords = await res.json();
-        populateFilters();
-        render();
-      } catch (err) {
-        console.error("Fetch error:", err);
-      }
-    }
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (isInitialized) return;
+            isInitialized = true;
+            await initApp();
+        });
 
-    function getFiltered() {
-      const fy = $filterYear.value, fm = $filterMonth.value, fa = $filterAccount.value;
-      return rawRecords.filter(r => {
-        const d = r.data;
-        if (fy && d["Year"] !== fy) return false;
-        if (fm && d["Month"] !== fm) return false;
-        if (fa && d["Account Name"] !== fa) return false;
-        return true;
-      });
-    }
+        async function initApp() {
+            try {
+                // Fetch Data from our secure proxy API
+                await fetchData();
 
-    function populateFilters() {
-      const years = new Set(), months = new Set(), accounts = new Set();
-      rawRecords.forEach(r => {
-        if (r.data["Year"]) years.add(r.data["Year"]);
-        if (r.data["Month"]) months.add(r.data["Month"]);
-        if (r.data["Account Name"]) accounts.add(r.data["Account Name"]);
-      });
-      sync($filterYear,    [...years].sort(),    "All Years");
-      sync($filterMonth,   [...months].sort((a,b) => MONTH_ORDER.indexOf(a) - MONTH_ORDER.indexOf(b)), "All Months");
-      sync($filterAccount, [...accounts].sort(), "All Accounts");
-    }
+                // 3. Setup Filters
+                populateFilters();
+                setupFilterListeners();
 
-    function sync(el, opts, placeholder) {
-      const cur = el.value;
-      el.innerHTML = `<option value="">${placeholder}</option>` + opts.map(o => `<option value="${o}"${o===cur?" selected":""}>${o}</option>`).join("");
-    }
+                // 4. Process & Render
+                processData();
+                updateDashboard();
 
-    function render() {
-      const data = getFiltered();
-      updateMetrics(data);
-      updateBar(data);
-      updateDonut(data);
-      updateTable(data);
-    }
+                // 5. Remove Loader
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
 
-    function updateMetrics(data) {
-      const total = data.length;
-      let p = 0, det = 0, sum = 0;
-      data.forEach(r => {
-        const s = parseInt(r.data["Score"], 10);
-        sum += s;
-        const c = classify(s);
-        if (c === "promoter") p++;
-        else if (c === "detractor") det++;
-      });
-      const pctP = total ? p/total*100 : 0;
-      const pctD = total ? det/total*100 : 0;
-      const nps  = Math.round(pctP - pctD);
-      $nps.textContent      = total ? nps : "—";
-      $npsSub.textContent   = total ? `${pctP.toFixed(0)}% P – ${pctD.toFixed(0)}% D` : "";
-      $avg.textContent      = total ? (sum/total).toFixed(1) : "—";
-      $total.textContent    = total;
-      $promoters.textContent  = p;
-      $detractors.textContent = det;
-    }
-
-    function updateBar(data) {
-      const grouped = {};
-      data.forEach(r => {
-        const m = r.data["Month"];
-        if (!grouped[m]) grouped[m] = {promoter:0,passive:0,detractor:0};
-        grouped[m][classify(r.data["Score"])]++;
-      });
-      const labels = Object.keys(grouped).sort((a,b) => MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b));
-      const cfg = {
-        type: "bar",
-        data: { labels, datasets: [
-          {label:"Promoters", data:labels.map(l=>grouped[l].promoter),  backgroundColor:"rgba(74,222,128,0.75)", borderRadius:4, borderSkipped:false},
-          {label:"Passives",  data:labels.map(l=>grouped[l].passive),   backgroundColor:"rgba(251,191,36,0.65)", borderRadius:4, borderSkipped:false},
-          {label:"Detractors",data:labels.map(l=>grouped[l].detractor), backgroundColor:"rgba(248,113,113,0.75)",borderRadius:4, borderSkipped:false}
-        ]},
-        options: { responsive:true, maintainAspectRatio:true,
-          plugins:{ legend:{labels:{color:"#9aa0a8",font:{size:12},padding:18}}, tooltip:{backgroundColor:"rgba(17,19,25,0.92)",titleColor:"#e8eaed",bodyColor:"#9aa0a8",cornerRadius:10,padding:12} },
-          scales:{ x:{stacked:true,ticks:{color:"#5f6672"},grid:{color:"rgba(255,255,255,0.04)"}}, y:{stacked:true,beginAtZero:true,ticks:{color:"#5f6672",stepSize:1},grid:{color:"rgba(255,255,255,0.04)"}} }
+            } catch (err) {
+                console.error("Initialization Failed:", err);
+                alert("Failed to initialize dashboard. Check console.");
+            }
         }
-      };
-      if (barChart) { barChart.data = cfg.data; barChart.update("none"); }
-      else barChart = new Chart(document.getElementById("chart-bar"), cfg);
-    }
 
-    function updateDonut(data) {
-      let p=0,pa=0,d=0;
-      data.forEach(r => { const c=classify(r.data["Score"]); if(c==="promoter")p++; else if(c==="passive")pa++; else d++; });
-      const cfg = {
-        type:"doughnut",
-        data:{labels:["Promoters","Passives","Detractors"],datasets:[{data:[p,pa,d],backgroundColor:["rgba(74,222,128,0.8)","rgba(251,191,36,0.7)","rgba(248,113,113,0.8)"],borderColor:"#0b0e14",borderWidth:3,hoverOffset:8}]},
-        options:{responsive:true,maintainAspectRatio:true,cutout:"68%",
-          plugins:{legend:{position:"bottom",labels:{color:"#9aa0a8",font:{size:12},padding:18}},tooltip:{backgroundColor:"rgba(17,19,25,0.92)",titleColor:"#e8eaed",bodyColor:"#9aa0a8",cornerRadius:10,padding:12}}
+        /**
+         * FETCH DATA
+         * Retrieves data from our secure backend API
+         */
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/corteza');
+                if (!response.ok) throw new Error("Backend Fetch Failed");
+                const result = await response.json();
+                
+                // If the backend falls back to mock data, or serves actual records
+                State.rawRecords = result.data || [];
+
+            } catch (err) {
+                console.error("Fetch Error:", err);
+            }
         }
-      };
-      if (donutChart) { donutChart.data = cfg.data; donutChart.update("none"); }
-      else donutChart = new Chart(document.getElementById("chart-donut"), cfg);
-    }
 
-    function updateTable(data) {
-      if (!data.length) {
-        $tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:40px">No records found</td></tr>`;
-        return;
-      }
-      $tableBody.innerHTML = data.map(r => {
-        const d = r.data;
-        const score = parseInt(d["Score"],10);
-        const cat = classify(score);
-        const st = (d["Status"]||"").toLowerCase();
-        const stClass = st==="active"?"active":st==="churned"?"churned":"default";
-        return `<tr>
-          <td>${d["Account Name"]||""}</td>
-          <td><span class="score-badge ${cat}">${score}</span></td>
-          <td>${d["Response"]||""}</td>
-          <td>${d["Month"]||""}</td>
-          <td>${d["Year"]||""}</td>
-          <td><span class="status-badge ${stClass}">${d["Status"]||""}</span></td>
-        </tr>`;
-      }).join("");
-    }
+        /**
+         * 3. FILTER & PROCESS DATA
+         * Applies filters and computes metrics
+         */
+        function getFilteredData() {
+            const { year, month, account, status } = State.filters;
+            return State.rawRecords.filter(record => {
+                const vals = record.values;
+                if (year && vals.Year !== year) return false;
+                if (month && vals.Month !== month) return false;
+                if (account && vals['Account Name'] !== account) return false;
+                if (status && vals.Status !== status) return false;
+                return true;
+            });
+        }
 
-    $filterYear.addEventListener("change", render);
-    $filterMonth.addEventListener("change", render);
-    $filterAccount.addEventListener("change", render);
-    document.getElementById("btn-reset-filters").addEventListener("click", () => {
-      $filterYear.value = ""; $filterMonth.value = ""; $filterAccount.value = "";
-      render();
-    });
+        function processData() {
+            const data = getFilteredData();
+            const metrics = { nps: 0, avg: 0, total: data.length, p: 0, d: 0, pa: 0 };
+            const monthly = {};
+            let sumScore = 0;
 
-    fetchData();
-    setInterval(fetchData, 5000);
-  })();
-  </script>
+            data.forEach(record => {
+                const vals = record.values;
+                const score = parseInt(vals.Score) || 0;
+                sumScore += score;
+
+                // Categorize
+                const cat = categorize(score);
+                if (cat === 'promoter') metrics.p++;
+                else if (cat === 'detractor') metrics.d++;
+                else metrics.pa++;
+
+                // Monthly Binning
+                const monthYear = `${vals.Month || 'N/A'} ${vals.Year || ''}`.trim();
+                if (!monthly[monthYear]) monthly[monthYear] = { p: 0, pa: 0, d: 0 };
+                monthly[monthYear][cat[0]]++; // p, d, or pa
+            });
+
+            // Final Computations
+            const pPct = (metrics.p / (metrics.total || 1)) * 100;
+            const dPct = (metrics.d / (metrics.total || 1)) * 100;
+            metrics.nps = Math.round(pPct - dPct);
+            metrics.avg = (sumScore / (metrics.total || 1)).toFixed(1);
+
+            State.processedData.metrics = metrics;
+            State.processedData.monthly = monthly;
+            State.processedData.latest = data.slice(0, 10); // Last 10 records
+        }
+
+        function categorize(score) {
+            if (score >= 9) return 'promoter';
+            if (score >= 7) return 'passive';
+            return 'detractor';
+        }
+
+        /**
+         * 4. RENDER UI
+         * Updates DOM and Charts
+         */
+        function updateDashboard() {
+            const { metrics, monthly, latest } = State.processedData;
+
+            // Update Metric Cards
+            document.getElementById('val-nps').textContent = metrics.nps;
+            document.getElementById('val-avg').textContent = metrics.avg;
+            document.getElementById('val-total').textContent = metrics.total;
+            document.getElementById('val-p').textContent = metrics.p;
+            document.getElementById('val-d').textContent = metrics.d;
+
+            // Update Tables
+            renderTable(latest);
+
+            // Update Charts
+            renderTrendsChart(monthly);
+            renderDistChart(metrics);
+        }
+
+        function renderTable(records) {
+            const tbody = document.getElementById('tbody-feedback');
+            tbody.innerHTML = records.map(r => {
+                const v = r.values;
+                const cat = categorize(v.Score);
+                const badgeClass = `badge-${cat}`;
+                return `
+                    <tr>
+                        <td style="font-weight: 500">${v['Account Name']}</td>
+                        <td><span class="badge ${badgeClass}">${v.Score}</span></td>
+                        <td><span style="opacity: 0.8">${v.Status || 'Active'}</span></td>
+                        <td style="color: var(--text-muted)">${v.Month} ${v.Year}</td>
+                        <td style="max-width: 300px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-size: 0.8rem">
+                            ${v.Response || '—'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderTrendsChart(data) {
+            const ctx = document.getElementById('chart-trends').getContext('2d');
+            const labels = Object.keys(data);
+            const dataset_p = labels.map(l => data[l].p);
+            const dataset_pa = labels.map(l => data[l].pa);
+            const dataset_d = labels.map(l => data[l].d);
+
+            if (State.charts.trends) {
+                // Soft Update
+                State.charts.trends.data.labels = labels;
+                State.charts.trends.data.datasets[0].data = dataset_p;
+                State.charts.trends.data.datasets[1].data = dataset_pa;
+                State.charts.trends.data.datasets[2].data = dataset_d;
+                State.charts.trends.update();
+            } else {
+                // Initial Render
+                State.charts.trends = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Promoters', data: dataset_p, backgroundColor: '#10b981', borderRadius: 6 },
+                            { label: 'Passives', data: dataset_pa, backgroundColor: '#f59e0b', borderRadius: 6 },
+                            { label: 'Detractors', data: dataset_d, backgroundColor: '#ef4444', borderRadius: 6 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+                        },
+                        scales: {
+                            x: { stacked: true, grid: { display: false }, ticks: { color: '#64748b' } },
+                            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderDistChart(metrics) {
+            const ctx = document.getElementById('chart-dist').getContext('2d');
+            
+            if (State.charts.dist) {
+                // Soft Update
+                State.charts.dist.data.datasets[0].data = [metrics.p, metrics.pa, metrics.d];
+                State.charts.dist.update();
+            } else {
+                // Initial Render
+                State.charts.dist = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Promoters', 'Passives', 'Detractors'],
+                        datasets: [{
+                            data: [metrics.p, metrics.pa, metrics.d],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        /**
+         * 5. FILTERS & LISTENERS
+         */
+        function populateFilters() {
+            const years = new Set(), months = new Set(), accounts = new Set(), statuses = new Set();
+            
+            State.rawRecords.forEach(r => {
+                const v = r.values;
+                if (v.Year) years.add(v.Year);
+                if (v.Month) months.add(v.Month);
+                if (v['Account Name']) accounts.add(v['Account Name']);
+                if (v.Status) statuses.add(v.Status);
+            });
+
+            syncSelect('filter-year', [...years].sort(), 'All Years');
+            // Assuming month order based on standard calendar
+            const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            syncSelect('filter-month', [...months].sort((a,b) => monthOrder.indexOf(a) - monthOrder.indexOf(b)), 'All Months');
+            syncSelect('filter-account', [...accounts].sort(), 'All Accounts');
+            syncSelect('filter-status', [...statuses].sort(), 'All Statuses');
+        }
+
+        function syncSelect(id, options, placeholder) {
+            const select = document.getElementById(id);
+            const currentVal = State.filters[id.replace('filter-', '')];
+            select.innerHTML = `<option value="">${placeholder}</option>` +
+                options.map(opt => `<option value="${opt}" ${opt === currentVal ? 'selected' : ''}>${opt}</option>`).join('');
+        }
+
+        function setupFilterListeners() {
+            const filters = ['year', 'month', 'account', 'status'];
+            
+            filters.forEach(key => {
+                document.getElementById(`filter-${key}`).addEventListener('change', (e) => {
+                    State.filters[key] = e.target.value;
+                    processData();
+                    updateDashboard();
+                });
+            });
+
+            document.getElementById('btn-reset-filters').addEventListener('click', () => {
+                filters.forEach(key => {
+                    State.filters[key] = '';
+                    document.getElementById(`filter-${key}`).value = '';
+                });
+                processData();
+                updateDashboard();
+            });
+        }
+
+        /**
+         * OPTIONAL: POLLING FUNCTION
+         * Invoke this to enable background data refresh
+         */
+        let pollingInterval = null;
+        function startPolling(ms = 30000) {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(async () => {
+                console.log("Background Refresh...");
+                await fetchData();
+                // We re-populate filters in case new data adds new accounts/months
+                populateFilters();
+                processData();
+                updateDashboard();
+            }, ms);
+        }
+
+        // --- HELPERS ---
+        function generateMockData(count) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const accounts = ['Global Tech', 'SoftCorp', 'Nexus Data', 'Alpha Systems', 'BlueWave'];
+            const responses = [
+                'Excellent service and support!',
+                'The UI is a bit confusing but the core features are great.',
+                'Disappointed with the recent update.',
+                'Perfect for our enterprise needs.',
+                'Very easy to integrate with our workflow.'
+            ];
+
+            return Array.from({ length: count }, () => {
+                const score = Math.floor(Math.random() * 11);
+                return {
+                    values: {
+                        'Account Name': accounts[Math.floor(Math.random() * accounts.length)],
+                        'Score': score,
+                        'Response': responses[Math.floor(Math.random() * responses.length)],
+                        'Year': '2025',
+                        'Month': months[Math.floor(Math.random() * months.length)],
+                        'Status': Math.random() > 0.2 ? 'Active' : 'Churned'
+                    }
+                };
+            });
+        }
+    </script>
 </body>
 </html>

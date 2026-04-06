@@ -3,6 +3,7 @@
  * Run: node server.js
  * This file is NOT deployed to Vercel; it's for local testing only.
  */
+require("dotenv").config();
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -10,6 +11,7 @@ const url = require("url");
 
 const PORT = 3000;
 const handler = require("./api/nps");
+const cortezaHandler = require("./api/corteza");
 
 const MIME = {
   ".html": "text/html",
@@ -26,6 +28,19 @@ const server = http.createServer((req, res) => {
   const pathname = parsed.pathname;
 
   // ── API route ──
+  if (pathname === "/api/corteza") {
+    res.status = (code) => {
+      res.statusCode = code;
+      return res;
+    };
+    res.json = (data) => {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(data));
+    };
+    cortezaHandler(req, res);
+    return;
+  }
+
   if (pathname === "/api/nps") {
     // Collect body for POST
     let body = "";
