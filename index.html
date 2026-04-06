@@ -1,824 +1,973 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NPS Analytics | Customer Sentiment Dashboard</title>
-    <meta name="description" content="A lightweight, high-performance Net Promoter Score (NPS) dashboard. Dashboard features client-side data processing and real-time visualization.">
-    
+    <meta
+      name="description"
+      content="A lightweight, high-performance Net Promoter Score (NPS) dashboard. Dashboard features client-side data processing and real-time visualization."
+    />
+
     <!-- Modern Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Chart.js for high-fidelity visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <style>
-        :root {
-            /* Premium Color Palette (Dark Mode First) */
-            --bg-body: #080a0f;
-            --bg-card: #121620;
-            --bg-surface: #1a1f2c;
-            --accent-primary: #6366f1; /* Indigo */
-            --accent-secondary: #0ea5e9; /* Sky */
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: rgba(255, 255, 255, 0.08);
-            
-            /* NPS Categories */
-            --promoter: #10b981;
-            --passive: #f59e0b;
-            --detractor: #ef4444;
-            
-            /* Glassmorphism */
-            --glass-bg: rgba(18, 22, 32, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.1);
+      :root {
+        /* Light Mode Palette */
+        --bg-body: #f8fafc;
+        --bg-card: #ffffff;
+        --bg-surface: #f1f5f9;
+
+        --accent-primary: #4f46e5; /* Indigo (slightly deeper for contrast) */
+        --accent-secondary: #0284c7; /* Sky */
+
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+
+        --border: rgba(15, 23, 42, 0.08);
+
+        /* NPS Categories (same, already good) */
+        --promoter: #059669;
+        --passive: #d97706;
+        --detractor: #dc2626;
+
+        /* Glassmorphism (light version) */
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+
+      /* --- Header --- */
+      header {
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(
+          180deg,
+          var(--bg-card) 0%,
+          var(--bg-body) 100%
+        );
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(12px);
+      }
+
+      .brand h1 {
+        font-family: "Outfit", sans-serif;
+        font-size: 1.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.02em;
+      }
+
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--promoter);
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+
+      .pulse {
+        width: 8px;
+        height: 8px;
+        background: var(--promoter);
+        border-radius: 50%;
+        box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+        animation: pulse-animation 2s infinite;
+      }
+
+      @keyframes pulse-animation {
+        0% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        70% {
+          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
         }
-
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-            line-height: 1.5;
-            overflow-x: hidden;
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
         }
+      }
 
-        /* --- Header --- */
-        header {
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-body) 100%);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(12px);
-        }
+      /* --- Layout --- */
+      main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
 
-        .brand h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.02em;
-        }
+      /* --- Metrics Section --- */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+      }
 
-        .status-pill {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--promoter);
-            padding: 0.4rem 0.85rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
+      .metric-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
 
-        .pulse {
-            width: 8px;
-            height: 8px;
-            background: var(--promoter);
-            border-radius: 50%;
-            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
-            animation: pulse-animation 2s infinite;
-        }
+      .metric-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent-primary);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      }
 
-        @keyframes pulse-animation {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
+      .metric-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: transparent;
+      }
 
-        /* --- Layout --- */
-        main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
+      .metric-card.nps::before {
+        background: var(--accent-primary);
+      }
+      .metric-card.avg::before {
+        background: var(--accent-secondary);
+      }
+      .metric-card.total::before {
+        background: var(--text-muted);
+      }
 
-        /* --- Metrics Section --- */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.25rem;
-        }
+      .metric-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
 
-        .metric-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 1.25rem;
-            padding: 1.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
+      .metric-value {
+        font-family: "Outfit", sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+      }
 
-        .metric-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent-primary);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-        }
+      .metric-trend {
+        font-size: 0.75rem;
+        margin-top: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
 
-        .metric-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: transparent;
-        }
+      /* --- Visualization Section --- */
+      .viz-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+      }
 
-        .metric-card.nps::before { background: var(--accent-primary); }
-        .metric-card.avg::before { background: var(--accent-secondary); }
-        .metric-card.total::before { background: var(--text-muted); }
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+      }
 
-        .metric-label {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
+      .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+        flex-grow: 1;
+      }
 
-        .metric-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            line-height: 1;
-        }
+      .card-header {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-        .metric-trend {
-            font-size: 0.75rem;
-            margin-top: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
+      .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-main);
+      }
 
-        /* --- Visualization Section --- */
+      /* --- Filters Section --- */
+      .filters-bar {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .filter-group label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .filter-group select {
+        background: var(--bg-surface);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        /* Custom dropdown arrow */
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem top 50%;
+        background-size: 0.65rem auto;
+        transition: border-color 0.2s;
+      }
+
+      .filter-group select:focus {
+        border-color: var(--accent-primary);
+      }
+
+      .btn-reset {
+        margin-left: auto;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-reset:hover {
+        color: var(--text-main);
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      /* --- Table Section --- */
+      .table-container {
+        overflow-x: auto;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        text-align: left;
+      }
+
+      th {
+        background: var(--bg-surface);
+        padding: 1rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.7rem;
+      }
+
+      td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-main);
+      }
+
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .badge {
+        padding: 0.25rem 0.6rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .badge-promoter {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--promoter);
+      }
+      .badge-passive {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--passive);
+      }
+      .badge-detractor {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--detractor);
+      }
+
+      /* --- Responsive Styling --- */
+      @media (max-width: 1024px) {
         .viz-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
+          grid-template-columns: 1fr;
         }
+      }
 
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 1.25rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
+      @media (max-width: 640px) {
+        main {
+          padding: 1rem;
         }
-
-        .chart-container {
-            position: relative;
-            height: 350px;
-            width: 100%;
-            flex-grow: 1;
+        .metrics-grid {
+          grid-template-columns: 1fr 1fr;
         }
-
-        .card-header {
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .metric-value {
+          font-size: 1.75rem;
         }
+      }
 
-        .card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-main);
+      /* Loading Overlay */
+      #loader {
+        position: fixed;
+        inset: 0;
+        background: var(--bg-body);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid var(--border);
+        border-top-color: var(--accent-primary);
+        border-radius: 50%;
+        animation: spin 1s infinite linear;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
-
-        /* --- Filters Section --- */
-        .filters-bar {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 1.25rem;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .filter-group label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .filter-group select {
-            background: var(--bg-surface);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 0.5rem 2rem 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            cursor: pointer;
-            outline: none;
-            appearance: none;
-            /* Custom dropdown arrow */
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem top 50%;
-            background-size: 0.65rem auto;
-            transition: border-color 0.2s;
-        }
-
-        .filter-group select:focus {
-            border-color: var(--accent-primary);
-        }
-
-        .btn-reset {
-            margin-left: auto;
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-reset:hover {
-            color: var(--text-main);
-            border-color: rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        /* --- Table Section --- */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 0.75rem;
-            border: 1px solid var(--border);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.875rem;
-            text-align: left;
-        }
-
-        th {
-            background: var(--bg-surface);
-            padding: 1rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.7rem;
-        }
-
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-main);
-        }
-
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .badge {
-            padding: 0.25rem 0.6rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .badge-promoter { background: rgba(16, 185, 129, 0.15); color: var(--promoter); }
-        .badge-passive { background: rgba(245, 158, 11, 0.15); color: var(--passive); }
-        .badge-detractor { background: rgba(239, 68, 68, 0.15); color: var(--detractor); }
-
-        /* --- Responsive Styling --- */
-        @media (max-width: 1024px) {
-            .viz-grid { grid-template-columns: 1fr; }
-        }
-
-        @media (max-width: 640px) {
-            main { padding: 1rem; }
-            .metrics-grid { grid-template-columns: 1fr 1fr; }
-            .metric-value { font-size: 1.75rem; }
-        }
-
-        /* Loading Overlay */
-        #loader {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-body);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease-out;
-        }
-
-        .spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid var(--border);
-            border-top-color: var(--accent-primary);
-            border-radius: 50%;
-            animation: spin 1s infinite linear;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <div id="loader">
-        <div class="spinner"></div>
-        <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem;">Connecting to Analytics Engine...</p>
+      <div class="spinner"></div>
+      <p
+        style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem"
+      >
+        Connecting to Analytics Engine...
+      </p>
     </div>
 
     <header>
-        <div class="brand">
-            <h1>NPS.Analytics</h1>
-        </div>
-        <div class="status-pill">
-            <span class="pulse"></span>
-            Real-time Monitoring
-        </div>
+      <div class="brand">
+        <h1>NPS.Analytics</h1>
+      </div>
+      <div class="status-pill">
+        <span class="pulse"></span>
+        Real-time Monitoring
+      </div>
     </header>
 
     <main>
-        <!-- Metrics Row -->
-        <section class="metrics-grid">
-            <div class="metric-card nps">
-                <div class="metric-label">Net Promoter Score</div>
-                <div class="metric-value" id="val-nps">—</div>
-                <div class="metric-trend" id="trend-nps">Calculated on total responses</div>
-            </div>
-            <div class="metric-card avg">
-                <div class="metric-label">Average Score</div>
-                <div class="metric-value" id="val-avg">—</div>
-                <div class="metric-trend">Scale 0-10</div>
-            </div>
-            <div class="metric-card total">
-                <div class="metric-label">Total Responses</div>
-                <div class="metric-value" id="val-total">0</div>
-                <div class="metric-trend">Lifetime volume</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Promoters</div>
-                <div class="metric-value" style="color: var(--promoter)" id="val-p">0</div>
-                <div class="metric-trend">9-10 rating</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Detractors</div>
-                <div class="metric-value" style="color: var(--detractor)" id="val-d">0</div>
-                <div class="metric-trend">0-6 rating</div>
-            </div>
-        </section>
+      <!-- Metrics Row -->
+      <section class="metrics-grid">
+        <div class="metric-card nps">
+          <div class="metric-label">Net Promoter Score</div>
+          <div class="metric-value" id="val-nps">—</div>
+          <div class="metric-trend" id="trend-nps">
+            Calculated on total responses
+          </div>
+        </div>
+        <div class="metric-card avg">
+          <div class="metric-label">Average Score</div>
+          <div class="metric-value" id="val-avg">—</div>
+          <div class="metric-trend">Scale 0-10</div>
+        </div>
+        <div class="metric-card total">
+          <div class="metric-label">Total Responses</div>
+          <div class="metric-value" id="val-total">0</div>
+          <div class="metric-trend">Lifetime volume</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Promoters</div>
+          <div class="metric-value" style="color: var(--promoter)" id="val-p">
+            0
+          </div>
+          <div class="metric-trend">9-10 rating</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Detractors</div>
+          <div class="metric-value" style="color: var(--detractor)" id="val-d">
+            0
+          </div>
+          <div class="metric-trend">0-6 rating</div>
+        </div>
+      </section>
 
-        <!-- Filters Bar -->
-        <section class="filters-bar">
-            <div class="filter-group">
-                <label for="filter-year">Year</label>
-                <select id="filter-year">
-                    <option value="">All Years</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="filter-month">Month</label>
-                <select id="filter-month">
-                    <option value="">All Months</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="filter-account">Account</label>
-                <select id="filter-account">
-                    <option value="">All Accounts</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="filter-status">Status</label>
-                <select id="filter-status">
-                    <option value="">All Statuses</option>
-                </select>
-            </div>
-            <button class="btn-reset" id="btn-reset-filters">Reset Filters</button>
-        </section>
+      <!-- Filters Bar -->
+      <section class="filters-bar">
+        <div class="filter-group">
+          <label for="filter-year">Year</label>
+          <select id="filter-year">
+            <option value="">All Years</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-month">Month</label>
+          <select id="filter-month">
+            <option value="">All Months</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-account">Account</label>
+          <select id="filter-account">
+            <option value="">All Accounts</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-status">Status</label>
+          <select id="filter-status">
+            <option value="">All Statuses</option>
+          </select>
+        </div>
+        <button class="btn-reset" id="btn-reset-filters">Reset Filters</button>
+      </section>
 
-        <section class="viz-grid">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Monthly Trends</h2>
-                </div>
-                <div class="chart-container">
-                    <canvas id="chart-trends"></canvas>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Response Distribution</h2>
-                </div>
-                <div class="chart-container">
-                    <canvas id="chart-dist"></canvas>
-                </div>
-            </div>
-        </section>
+      <section class="viz-grid">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Monthly Trends</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-trends"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Response Distribution</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-dist"></canvas>
+          </div>
+        </div>
+      </section>
 
-        <!-- Table Row -->
-        <section class="card">
-            <div class="card-header">
-                <h2 class="card-title">Recent Feedback</h2>
-            </div>
-            <div class="table-container">
-                <table id="tbl-feedback">
-                    <thead>
-                        <tr>
-                            <th>Account Name</th>
-                            <th>Score</th>
-                            <th>Status</th>
-                            <th>Period</th>
-                            <th>Comments</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-feedback">
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                                Initiating secure data handshake...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+      <!-- Table Row -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Feedback</h2>
+        </div>
+        <div class="table-container">
+          <table id="tbl-feedback">
+            <thead>
+              <tr>
+                <th>Account Name</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Period</th>
+                <th>Comments</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-feedback">
+              <tr>
+                <td
+                  colspan="5"
+                  style="
+                    text-align: center;
+                    color: var(--text-muted);
+                    padding: 3rem;
+                  "
+                >
+                  Initiating secure data handshake...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
 
     <script>
-        /**
-         * NPS Dashboard Logic - Modular & Pure Client-Side
-         */
+      /**
+       * NPS Dashboard Logic - Modular & Pure Client-Side
+       */
 
+      // --- State Management ---
+      const State = {
+        token: null,
+        rawRecords: [],
+        filters: {
+          year: "",
+          month: "",
+          account: "",
+          status: "",
+        },
+        processedData: {
+          metrics: { nps: 0, avg: 0, total: 0, p: 0, d: 0, pa: 0 },
+          monthly: {}, // { 'Jan 23': { p: 0, pa: 0, d: 0 } }
+          latest: [],
+        },
+        charts: {
+          trends: null,
+          dist: null,
+        },
+      };
 
-        // --- State Management ---
-        const State = {
-            token: null,
-            rawRecords: [],
-            filters: {
-                year: '',
-                month: '',
-                account: '',
-                status: ''
-            },
-            processedData: {
-                metrics: { nps: 0, avg: 0, total: 0, p: 0, d: 0, pa: 0 },
-                monthly: {}, // { 'Jan 23': { p: 0, pa: 0, d: 0 } }
-                latest: []
-            },
-            charts: {
-                trends: null,
-                dist: null
-            }
+      // --- UI Initialization ---
+      let isInitialized = false;
+
+      window.addEventListener("DOMContentLoaded", async () => {
+        if (isInitialized) return;
+        isInitialized = true;
+        await initApp();
+      });
+
+      async function initApp() {
+        try {
+          // Fetch Data from our secure proxy API
+          await fetchData();
+
+          // 3. Setup Filters
+          populateFilters();
+          setupFilterListeners();
+
+          // 4. Process & Render
+          processData();
+          updateDashboard();
+
+          // 5. Remove Loader
+          document.getElementById("loader").style.opacity = "0";
+          setTimeout(
+            () => (document.getElementById("loader").style.display = "none"),
+            500,
+          );
+        } catch (err) {
+          console.error("Initialization Failed:", err);
+          alert("Failed to initialize dashboard. Check console.");
+        }
+      }
+
+      /**
+       * FETCH DATA
+       * Retrieves data from our secure backend API
+       */
+      async function fetchData() {
+        try {
+          const response = await fetch("/api/corteza");
+          if (!response.ok) throw new Error("Backend Fetch Failed");
+          const result = await response.json();
+
+          // If the backend falls back to mock data, or serves actual records
+          State.rawRecords = result.data || [];
+        } catch (err) {
+          console.error("Fetch Error:", err);
+        }
+      }
+
+      /**
+       * 3. FILTER & PROCESS DATA
+       * Applies filters and computes metrics
+       */
+      function getFilteredData() {
+        const { year, month, account, status } = State.filters;
+        return State.rawRecords.filter((record) => {
+          const vals = record.values;
+          if (year && vals.Year !== year) return false;
+          if (month && vals.Month !== month) return false;
+          if (account && vals["Account Name"] !== account) return false;
+          if (status && vals.Status !== status) return false;
+          return true;
+        });
+      }
+
+      function processData() {
+        const data = getFilteredData();
+        const metrics = {
+          nps: 0,
+          avg: 0,
+          total: data.length,
+          p: 0,
+          d: 0,
+          pa: 0,
         };
+        const monthly = {};
+        let sumScore = 0;
 
-        // --- UI Initialization ---
-        let isInitialized = false;
+        data.forEach((record) => {
+          const vals = record.values;
+          const score = parseInt(vals.Score) || 0;
+          sumScore += score;
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            if (isInitialized) return;
-            isInitialized = true;
-            await initApp();
+          // Categorize
+          const cat = categorize(score);
+          if (cat === "promoter") metrics.p++;
+          else if (cat === "detractor") metrics.d++;
+          else metrics.pa++;
+
+          // Monthly Binning
+          const monthYear = `${vals.Month || "N/A"} ${vals.Year || ""}`.trim();
+          if (!monthly[monthYear]) monthly[monthYear] = { p: 0, pa: 0, d: 0 };
+          monthly[monthYear][cat[0]]++; // p, d, or pa
         });
 
-        async function initApp() {
-            try {
-                // Fetch Data from our secure proxy API
-                await fetchData();
+        // Final Computations
+        const pPct = (metrics.p / (metrics.total || 1)) * 100;
+        const dPct = (metrics.d / (metrics.total || 1)) * 100;
+        metrics.nps = Math.round(pPct - dPct);
+        metrics.avg = (sumScore / (metrics.total || 1)).toFixed(1);
 
-                // 3. Setup Filters
-                populateFilters();
-                setupFilterListeners();
+        State.processedData.metrics = metrics;
+        State.processedData.monthly = monthly;
+        State.processedData.latest = data.slice(0, 10); // Last 10 records
+      }
 
-                // 4. Process & Render
-                processData();
-                updateDashboard();
+      function categorize(score) {
+        if (score >= 9) return "promoter";
+        if (score >= 7) return "passive";
+        return "detractor";
+      }
 
-                // 5. Remove Loader
-                document.getElementById('loader').style.opacity = '0';
-                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+      /**
+       * 4. RENDER UI
+       * Updates DOM and Charts
+       */
+      function updateDashboard() {
+        const { metrics, monthly, latest } = State.processedData;
 
-            } catch (err) {
-                console.error("Initialization Failed:", err);
-                alert("Failed to initialize dashboard. Check console.");
-            }
-        }
+        // Update Metric Cards
+        document.getElementById("val-nps").textContent = metrics.nps;
+        document.getElementById("val-avg").textContent = metrics.avg;
+        document.getElementById("val-total").textContent = metrics.total;
+        document.getElementById("val-p").textContent = metrics.p;
+        document.getElementById("val-d").textContent = metrics.d;
 
-        /**
-         * FETCH DATA
-         * Retrieves data from our secure backend API
-         */
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/corteza');
-                if (!response.ok) throw new Error("Backend Fetch Failed");
-                const result = await response.json();
-                
-                // If the backend falls back to mock data, or serves actual records
-                State.rawRecords = result.data || [];
+        // Update Tables
+        renderTable(latest);
 
-            } catch (err) {
-                console.error("Fetch Error:", err);
-            }
-        }
+        // Update Charts
+        renderTrendsChart(monthly);
+        renderDistChart(metrics);
+      }
 
-        /**
-         * 3. FILTER & PROCESS DATA
-         * Applies filters and computes metrics
-         */
-        function getFilteredData() {
-            const { year, month, account, status } = State.filters;
-            return State.rawRecords.filter(record => {
-                const vals = record.values;
-                if (year && vals.Year !== year) return false;
-                if (month && vals.Month !== month) return false;
-                if (account && vals['Account Name'] !== account) return false;
-                if (status && vals.Status !== status) return false;
-                return true;
-            });
-        }
-
-        function processData() {
-            const data = getFilteredData();
-            const metrics = { nps: 0, avg: 0, total: data.length, p: 0, d: 0, pa: 0 };
-            const monthly = {};
-            let sumScore = 0;
-
-            data.forEach(record => {
-                const vals = record.values;
-                const score = parseInt(vals.Score) || 0;
-                sumScore += score;
-
-                // Categorize
-                const cat = categorize(score);
-                if (cat === 'promoter') metrics.p++;
-                else if (cat === 'detractor') metrics.d++;
-                else metrics.pa++;
-
-                // Monthly Binning
-                const monthYear = `${vals.Month || 'N/A'} ${vals.Year || ''}`.trim();
-                if (!monthly[monthYear]) monthly[monthYear] = { p: 0, pa: 0, d: 0 };
-                monthly[monthYear][cat[0]]++; // p, d, or pa
-            });
-
-            // Final Computations
-            const pPct = (metrics.p / (metrics.total || 1)) * 100;
-            const dPct = (metrics.d / (metrics.total || 1)) * 100;
-            metrics.nps = Math.round(pPct - dPct);
-            metrics.avg = (sumScore / (metrics.total || 1)).toFixed(1);
-
-            State.processedData.metrics = metrics;
-            State.processedData.monthly = monthly;
-            State.processedData.latest = data.slice(0, 10); // Last 10 records
-        }
-
-        function categorize(score) {
-            if (score >= 9) return 'promoter';
-            if (score >= 7) return 'passive';
-            return 'detractor';
-        }
-
-        /**
-         * 4. RENDER UI
-         * Updates DOM and Charts
-         */
-        function updateDashboard() {
-            const { metrics, monthly, latest } = State.processedData;
-
-            // Update Metric Cards
-            document.getElementById('val-nps').textContent = metrics.nps;
-            document.getElementById('val-avg').textContent = metrics.avg;
-            document.getElementById('val-total').textContent = metrics.total;
-            document.getElementById('val-p').textContent = metrics.p;
-            document.getElementById('val-d').textContent = metrics.d;
-
-            // Update Tables
-            renderTable(latest);
-
-            // Update Charts
-            renderTrendsChart(monthly);
-            renderDistChart(metrics);
-        }
-
-        function renderTable(records) {
-            const tbody = document.getElementById('tbody-feedback');
-            tbody.innerHTML = records.map(r => {
-                const v = r.values;
-                const cat = categorize(v.Score);
-                const badgeClass = `badge-${cat}`;
-                return `
+      function renderTable(records) {
+        const tbody = document.getElementById("tbody-feedback");
+        tbody.innerHTML = records
+          .map((r) => {
+            const v = r.values;
+            const cat = categorize(v.Score);
+            const badgeClass = `badge-${cat}`;
+            return `
                     <tr>
-                        <td style="font-weight: 500">${v['Account Name']}</td>
+                        <td style="font-weight: 500">${v["Account Name"]}</td>
                         <td><span class="badge ${badgeClass}">${v.Score}</span></td>
-                        <td><span style="opacity: 0.8">${v.Status || 'Active'}</span></td>
+                        <td><span style="opacity: 0.8">${v.Status || "Active"}</span></td>
                         <td style="color: var(--text-muted)">${v.Month} ${v.Year}</td>
                         <td style="max-width: 300px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-size: 0.8rem">
-                            ${v.Response || '—'}
+                            ${v.Response || "—"}
                         </td>
                     </tr>
                 `;
-            }).join('');
+          })
+          .join("");
+      }
+
+      function renderTrendsChart(data) {
+        const ctx = document.getElementById("chart-trends").getContext("2d");
+        const labels = Object.keys(data);
+        const dataset_p = labels.map((l) => data[l].p);
+        const dataset_pa = labels.map((l) => data[l].pa);
+        const dataset_d = labels.map((l) => data[l].d);
+
+        if (State.charts.trends) {
+          // Soft Update
+          State.charts.trends.data.labels = labels;
+          State.charts.trends.data.datasets[0].data = dataset_p;
+          State.charts.trends.data.datasets[1].data = dataset_pa;
+          State.charts.trends.data.datasets[2].data = dataset_d;
+          State.charts.trends.update();
+        } else {
+          // Initial Render
+          State.charts.trends = new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: "Promoters",
+                  data: dataset_p,
+                  backgroundColor: "#10b981",
+                  borderRadius: 6,
+                },
+                {
+                  label: "Passives",
+                  data: dataset_pa,
+                  backgroundColor: "#f59e0b",
+                  borderRadius: 6,
+                },
+                {
+                  label: "Detractors",
+                  data: dataset_d,
+                  backgroundColor: "#ef4444",
+                  borderRadius: 6,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: "bottom",
+                  labels: { color: "#94a3b8", font: { size: 10 } },
+                },
+              },
+              scales: {
+                x: {
+                  stacked: true,
+                  grid: { display: false },
+                  ticks: { color: "#64748b" },
+                },
+                y: {
+                  stacked: true,
+                  grid: { color: "rgba(255,255,255,0.05)" },
+                  ticks: { color: "#64748b" },
+                },
+              },
+            },
+          });
         }
+      }
 
-        function renderTrendsChart(data) {
-            const ctx = document.getElementById('chart-trends').getContext('2d');
-            const labels = Object.keys(data);
-            const dataset_p = labels.map(l => data[l].p);
-            const dataset_pa = labels.map(l => data[l].pa);
-            const dataset_d = labels.map(l => data[l].d);
+      function renderDistChart(metrics) {
+        const ctx = document.getElementById("chart-dist").getContext("2d");
 
-            if (State.charts.trends) {
-                // Soft Update
-                State.charts.trends.data.labels = labels;
-                State.charts.trends.data.datasets[0].data = dataset_p;
-                State.charts.trends.data.datasets[1].data = dataset_pa;
-                State.charts.trends.data.datasets[2].data = dataset_d;
-                State.charts.trends.update();
-            } else {
-                // Initial Render
-                State.charts.trends = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            { label: 'Promoters', data: dataset_p, backgroundColor: '#10b981', borderRadius: 6 },
-                            { label: 'Passives', data: dataset_pa, backgroundColor: '#f59e0b', borderRadius: 6 },
-                            { label: 'Detractors', data: dataset_d, backgroundColor: '#ef4444', borderRadius: 6 }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { 
-                            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
-                        },
-                        scales: {
-                            x: { stacked: true, grid: { display: false }, ticks: { color: '#64748b' } },
-                            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
-                        }
-                    }
-                });
-            }
+        if (State.charts.dist) {
+          // Soft Update
+          State.charts.dist.data.datasets[0].data = [
+            metrics.p,
+            metrics.pa,
+            metrics.d,
+          ];
+          State.charts.dist.update();
+        } else {
+          // Initial Render
+          State.charts.dist = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+              labels: ["Promoters", "Passives", "Detractors"],
+              datasets: [
+                {
+                  data: [metrics.p, metrics.pa, metrics.d],
+                  backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+                  borderWidth: 0,
+                  hoverOffset: 10,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "75%",
+              plugins: {
+                legend: {
+                  position: "bottom",
+                  labels: { color: "#94a3b8", font: { size: 11 } },
+                },
+              },
+            },
+          });
         }
+      }
 
-        function renderDistChart(metrics) {
-            const ctx = document.getElementById('chart-dist').getContext('2d');
-            
-            if (State.charts.dist) {
-                // Soft Update
-                State.charts.dist.data.datasets[0].data = [metrics.p, metrics.pa, metrics.d];
-                State.charts.dist.update();
-            } else {
-                // Initial Render
-                State.charts.dist = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Promoters', 'Passives', 'Detractors'],
-                        datasets: [{
-                            data: [metrics.p, metrics.pa, metrics.d],
-                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                            borderWidth: 0,
-                            hoverOffset: 10
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '75%',
-                        plugins: {
-                            legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
-                        }
-                    }
-                });
-            }
-        }
+      /**
+       * 5. FILTERS & LISTENERS
+       */
+      function populateFilters() {
+        const years = new Set(),
+          months = new Set(),
+          accounts = new Set(),
+          statuses = new Set();
 
-        /**
-         * 5. FILTERS & LISTENERS
-         */
-        function populateFilters() {
-            const years = new Set(), months = new Set(), accounts = new Set(), statuses = new Set();
-            
-            State.rawRecords.forEach(r => {
-                const v = r.values;
-                if (v.Year) years.add(v.Year);
-                if (v.Month) months.add(v.Month);
-                if (v['Account Name']) accounts.add(v['Account Name']);
-                if (v.Status) statuses.add(v.Status);
+        State.rawRecords.forEach((r) => {
+          const v = r.values;
+          if (v.Year) years.add(v.Year);
+          if (v.Month) months.add(v.Month);
+          if (v["Account Name"]) accounts.add(v["Account Name"]);
+          if (v.Status) statuses.add(v.Status);
+        });
+
+        syncSelect("filter-year", [...years].sort(), "All Years");
+        // Assuming month order based on standard calendar
+        const monthOrder = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        syncSelect(
+          "filter-month",
+          [...months].sort(
+            (a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b),
+          ),
+          "All Months",
+        );
+        syncSelect("filter-account", [...accounts].sort(), "All Accounts");
+        syncSelect("filter-status", [...statuses].sort(), "All Statuses");
+      }
+
+      function syncSelect(id, options, placeholder) {
+        const select = document.getElementById(id);
+        const currentVal = State.filters[id.replace("filter-", "")];
+        select.innerHTML =
+          `<option value="">${placeholder}</option>` +
+          options
+            .map(
+              (opt) =>
+                `<option value="${opt}" ${opt === currentVal ? "selected" : ""}>${opt}</option>`,
+            )
+            .join("");
+      }
+
+      function setupFilterListeners() {
+        const filters = ["year", "month", "account", "status"];
+
+        filters.forEach((key) => {
+          document
+            .getElementById(`filter-${key}`)
+            .addEventListener("change", (e) => {
+              State.filters[key] = e.target.value;
+              processData();
+              updateDashboard();
             });
+        });
 
-            syncSelect('filter-year', [...years].sort(), 'All Years');
-            // Assuming month order based on standard calendar
-            const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            syncSelect('filter-month', [...months].sort((a,b) => monthOrder.indexOf(a) - monthOrder.indexOf(b)), 'All Months');
-            syncSelect('filter-account', [...accounts].sort(), 'All Accounts');
-            syncSelect('filter-status', [...statuses].sort(), 'All Statuses');
-        }
-
-        function syncSelect(id, options, placeholder) {
-            const select = document.getElementById(id);
-            const currentVal = State.filters[id.replace('filter-', '')];
-            select.innerHTML = `<option value="">${placeholder}</option>` +
-                options.map(opt => `<option value="${opt}" ${opt === currentVal ? 'selected' : ''}>${opt}</option>`).join('');
-        }
-
-        function setupFilterListeners() {
-            const filters = ['year', 'month', 'account', 'status'];
-            
-            filters.forEach(key => {
-                document.getElementById(`filter-${key}`).addEventListener('change', (e) => {
-                    State.filters[key] = e.target.value;
-                    processData();
-                    updateDashboard();
-                });
+        document
+          .getElementById("btn-reset-filters")
+          .addEventListener("click", () => {
+            filters.forEach((key) => {
+              State.filters[key] = "";
+              document.getElementById(`filter-${key}`).value = "";
             });
+            processData();
+            updateDashboard();
+          });
+      }
 
-            document.getElementById('btn-reset-filters').addEventListener('click', () => {
-                filters.forEach(key => {
-                    State.filters[key] = '';
-                    document.getElementById(`filter-${key}`).value = '';
-                });
-                processData();
-                updateDashboard();
-            });
-        }
+      /**
+       * OPTIONAL: POLLING FUNCTION
+       * Invoke this to enable background data refresh
+       */
+      let pollingInterval = null;
+      function startPolling(ms = 30000) {
+        if (pollingInterval) clearInterval(pollingInterval);
+        pollingInterval = setInterval(async () => {
+          console.log("Background Refresh...");
+          await fetchData();
+          // We re-populate filters in case new data adds new accounts/months
+          populateFilters();
+          processData();
+          updateDashboard();
+        }, ms);
+      }
 
-        /**
-         * OPTIONAL: POLLING FUNCTION
-         * Invoke this to enable background data refresh
-         */
-        let pollingInterval = null;
-        function startPolling(ms = 30000) {
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(async () => {
-                console.log("Background Refresh...");
-                await fetchData();
-                // We re-populate filters in case new data adds new accounts/months
-                populateFilters();
-                processData();
-                updateDashboard();
-            }, ms);
-        }
+      // --- HELPERS ---
+      function generateMockData(count) {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+        const accounts = [
+          "Global Tech",
+          "SoftCorp",
+          "Nexus Data",
+          "Alpha Systems",
+          "BlueWave",
+        ];
+        const responses = [
+          "Excellent service and support!",
+          "The UI is a bit confusing but the core features are great.",
+          "Disappointed with the recent update.",
+          "Perfect for our enterprise needs.",
+          "Very easy to integrate with our workflow.",
+        ];
 
-        // --- HELPERS ---
-        function generateMockData(count) {
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-            const accounts = ['Global Tech', 'SoftCorp', 'Nexus Data', 'Alpha Systems', 'BlueWave'];
-            const responses = [
-                'Excellent service and support!',
-                'The UI is a bit confusing but the core features are great.',
-                'Disappointed with the recent update.',
-                'Perfect for our enterprise needs.',
-                'Very easy to integrate with our workflow.'
-            ];
-
-            return Array.from({ length: count }, () => {
-                const score = Math.floor(Math.random() * 11);
-                return {
-                    values: {
-                        'Account Name': accounts[Math.floor(Math.random() * accounts.length)],
-                        'Score': score,
-                        'Response': responses[Math.floor(Math.random() * responses.length)],
-                        'Year': '2025',
-                        'Month': months[Math.floor(Math.random() * months.length)],
-                        'Status': Math.random() > 0.2 ? 'Active' : 'Churned'
-                    }
-                };
-            });
-        }
+        return Array.from({ length: count }, () => {
+          const score = Math.floor(Math.random() * 11);
+          return {
+            values: {
+              "Account Name":
+                accounts[Math.floor(Math.random() * accounts.length)],
+              Score: score,
+              Response: responses[Math.floor(Math.random() * responses.length)],
+              Year: "2025",
+              Month: months[Math.floor(Math.random() * months.length)],
+              Status: Math.random() > 0.2 ? "Active" : "Churned",
+            },
+          };
+        });
+      }
     </script>
-</body>
+  </body>
 </html>
