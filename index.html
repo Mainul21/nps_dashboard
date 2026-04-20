@@ -85,7 +85,7 @@
         font-family: "Outfit", sans-serif;
         font-size: 1.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: -0.02em;
@@ -415,15 +415,16 @@
       </p>
     </div>
 
-    <!-- <header>
+    <header>
       <div class="brand">
         <h1>NPS.Analytics</h1>
       </div>
+      <div id="user-info" style="display: none;"></div>
       <div class="status-pill">
         <span class="pulse"></span>
         Real-time Monitoring
       </div>
-    </header> -->
+    </header>
 
     <main>
       <!-- Metrics Row -->
@@ -552,6 +553,7 @@
       // --- State Management ---
       const State = {
         token: null,
+        employee: null,
         rawRecords: [],
         filters: {
           year: "",
@@ -581,12 +583,20 @@
 
       async function initApp() {
         try {
-          // Fetch Data from our secure proxy API
-          await fetchData();
+          // Check for email parameter in URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const userEmail = urlParams.get("email");
 
-          // 3. Setup Filters
-          populateFilters();
-          setupFilterListeners();
+          if (userEmail) {
+            // User accessed via email link - fetch business unit data
+            console.log(`📧 User email detected: ${userEmail}`);
+            await fetchBusinessUnitData(userEmail);
+          } else {
+            // Standard dashboard access - fetch all data
+            await fetchData();
+            populateFilters();
+            setupFilterListeners();
+          }
 
           // 4. Process & Render
           processData();
@@ -602,6 +612,58 @@
           console.error("Initialization Failed:", err);
           alert("Failed to initialize dashboard. Check console.");
         }
+      }
+
+      /**
+       * FETCH BUSINESS UNIT DATA
+       * Called when user accesses dashboard via email link
+       */
+      async function fetchBusinessUnitData(email) {
+        try {
+          console.log(`🔍 Fetching business unit data for: ${email}`);
+          const response = await fetch(`/api/businessunit?email=${encodeURIComponent(email)}`);
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to fetch business unit data");
+          }
+
+          const result = await response.json();
+          console.log("✅ Business Unit Data:", result);
+
+          // Store employee info
+          State.employee = result.employee;
+
+          // Store NPS records for this business unit
+          State.rawRecords = result.npsData.records || [];
+
+          // Update header to show user info
+          displayUserInfo(result.employee);
+
+          // Populate filters from filtered data
+          populateFilters();
+          setupFilterListeners();
+        } catch (err) {
+          console.error("Business Unit Fetch Error:", err);
+          alert(`Error: ${err.message}`);
+        }
+      }
+
+      /**
+       * Display user information in header
+       */
+      function displayUserInfo(employee) {
+        const userInfoDiv = document.getElementById("user-info");
+        if (!userInfoDiv) return;
+
+        userInfoDiv.style.display = "block";
+        userInfoDiv.innerHTML = `
+          <div style="text-align: right; font-size: 0.875rem;">
+            <div style="color: var(--text-main); font-weight: 600;">👤 ${employee.name}</div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">${employee.email}</div>
+            <div style="color: var(--accent-primary); font-weight: 600; margin-top: 0.25rem;">📊 ${employee.businessUnit}</div>
+          </div>
+        `;
       }
 
       /**

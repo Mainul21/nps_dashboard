@@ -12,6 +12,7 @@ const url = require("url");
 const PORT = 3000;
 const handler = require("./api/nps");
 const cortezaHandler = require("./api/corteza");
+const businessUnitHandler = require("./api/businessunit");
 
 const MIME = {
   ".html": "text/html",
@@ -38,6 +39,19 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify(data));
     };
     cortezaHandler(req, res);
+    return;
+  }
+
+  if (pathname === "/api/businessunit") {
+    res.status = (code) => {
+      res.statusCode = code;
+      return res;
+    };
+    res.json = (data) => {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(data));
+    };
+    businessUnitHandler(req, res);
     return;
   }
 

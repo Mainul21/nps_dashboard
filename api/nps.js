@@ -6,7 +6,7 @@ const REQUIRED_FIELDS = [
   "Month",
   "Status",
 ];
-const records = [];
+const npsData = require("./npsData");
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,7 +29,7 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
 
   if (req.method === "GET") {
-    return res.status(200).json(records);
+    return res.status(200).json(npsData.getRecords());
   }
 
   if (req.method === "POST") {
@@ -71,8 +71,8 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    records.push({ data: parsed.data });
-    return res.status(201).json({ success: true, total: records.length });
+    npsData.addRecord(parsed.data);
+    return res.status(201).json({ success: true, total: npsData.getCount() });
   }
 
   return res.status(405).json({ success: false, error: "Method not allowed." });
