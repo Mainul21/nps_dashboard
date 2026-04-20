@@ -633,12 +633,13 @@
 
           // Store employee info
           State.employee = result.employee;
+          State.businessUnitInfo = result.businessUnitInfo;
 
           // Store NPS records for this business unit
           State.rawRecords = result.npsData.records || [];
 
           // Update header to show user info
-          displayUserInfo(result.employee);
+          displayUserInfo(result.employee, result.businessUnitInfo);
 
           // Populate filters from filtered data
           populateFilters();
@@ -652,16 +653,18 @@
       /**
        * Display user information in header
        */
-      function displayUserInfo(employee) {
+      function displayUserInfo(employee, businessUnitInfo) {
         const userInfoDiv = document.getElementById("user-info");
         if (!userInfoDiv) return;
+
+        const buName = businessUnitInfo?.name || employee?.businessUnit || "N/A";
 
         userInfoDiv.style.display = "block";
         userInfoDiv.innerHTML = `
           <div style="text-align: right; font-size: 0.875rem;">
             <div style="color: var(--text-main); font-weight: 600;">👤 ${employee.name}</div>
             <div style="color: var(--text-muted); font-size: 0.75rem;">${employee.email}</div>
-            <div style="color: var(--accent-primary); font-weight: 600; margin-top: 0.25rem;">📊 ${employee.businessUnit}</div>
+            <div style="color: var(--accent-primary); font-weight: 600; margin-top: 0.25rem;">📊 ${buName}</div>
           </div>
         `;
       }

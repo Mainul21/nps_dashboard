@@ -45,6 +45,8 @@ module.exports = async function handler(req, res) {
     NAMESPACE_ID,
     EMPLOYEE_MODULE_ID,
     MODULE_ID,
+    BUSINESS_UNIT_NAMESPACE_ID,
+    BUSINESS_UNIT_MODULE_ID,
   } = process.env;
 
   if (!CORTEZA_BASE_URL || !CLIENT_ID || !CLIENT_SECRET || !NAMESPACE_ID) {
@@ -57,6 +59,8 @@ module.exports = async function handler(req, res) {
 
   const employeeModuleId = EMPLOYEE_MODULE_ID || "428173443465674753";
   const npsModuleId = MODULE_ID || "454782398924587009";
+  const businessUnitNamespaceId = BUSINESS_UNIT_NAMESPACE_ID || "389091856357720065";
+  const businessUnitModuleId = BUSINESS_UNIT_MODULE_ID || "427539736995823617";
 
   try {
     // ── Step 1: Obtain access token ──────────────────────────────────────────
@@ -147,6 +151,42 @@ module.exports = async function handler(req, res) {
       `✅ [BUSINESSUNIT] Business Unit: "${businessUnit}" for "${personName}"`,
     );
 
+    // ── Step 4.5: Fetch Business Unit Name ─────────────────────────────────
+    console.log(
+      `📡 [BUSINESSUNIT] Fetching Business Unit Name for ID: ${businessUnit}...`,
+    );
+    let businessUnitName = businessUnit;
+    try {
+      const buRecords = await fetchAllRecords(
+        CORTEZA_BASE_URL,
+        businessUnitNamespaceId,
+        businessUnitModuleId,
+        token,
+      );
+      
+      console.log(`📋 [BUSINESSUNIT] Fetched ${buRecords.length} Business Unit records, looking for ID: ${businessUnit}`);
+      
+      for (const record of buRecords) {
+        const vals = flattenValues(record.values);
+        const recordId = record.id || record.recordID;
+        
+        console.log(`  🔍 Checking record ID: ${recordId}, fields: ${Object.keys(vals).join(", ")}`);
+        
+        if (recordId === businessUnit) {
+          businessUnitName = vals.Name || vals.BusinessUnitName || vals.name || businessUnit;
+          console.log(`✅ [BUSINESSUNIT] Business Unit Name: "${businessUnitName}"`);
+          break;
+        }
+      }
+      
+      if (businessUnitName === businessUnit) {
+        console.log(`⚠️  [BUSINESSUNIT] No matching BU record found for ID: ${businessUnit}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️  [BUSINESSUNIT] Could not fetch BU name: ${error.message}`);
+      // Continue without BU name if fetch fails
+    }
+
     // ── Step 5: Fetch all NPS records (paginated) ────────────────────────────
     console.log(
       `📡 [BUSINESSUNIT] Fetching NPS records from module ${npsModuleId}...`,
@@ -201,6 +241,10 @@ module.exports = async function handler(req, res) {
         email: email,
         name: personName,
         businessUnit: businessUnit,
+      },
+      businessUnitInfo: {
+        id: businessUnit,
+        name: businessUnitName,
       },
       npsData: {
         count: filteredNps.length,
